@@ -1,2 +1,0 @@
-[console_scripts]
-ai-sales-analytics = ai_sales_analytics.cli:app
