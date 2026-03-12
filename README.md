@@ -1,0 +1,253 @@
+# AI Sales Analytics
+
+Production-like backend модуль аналитики для существующего AI sales bot.
+
+Проект подключается к БД бота, рассчитывает продуктовую и conversational аналитику, строит полезные визуализации, формирует управленческие выводы (включая optional LLM insight layer) и доставляет ежедневный отчет администратору.
+
+## Что решает
+
+В конце дня администратор получает:
+- ключевые KPI: лиды, активные диалоги, сообщения, bookings, lost, handoff;
+- воронку и точки отвала;
+- поведение клиентов: intents, вопросы, возражения, интересы;
+- качество работы AI-бота: low-confidence, no-progress, no-next-step, follow-up returns;
+- управленческие рекомендации по улучшению скрипта и воронки.
+
+## Ключевые возможности
+
+- Read-only data access к production БД через SQLAlchemy.
+- Schema adapter (YAML mapping), чтобы не зависеть жестко от схемы таблиц.
+- Модульный analytics core:
+  - Operational metrics
+  - Funnel analytics
+  - Intent & behavior analytics
+  - Bot quality analytics
+  - Heuristic insights + optional LLM insights
+- Визуализации (decision-useful графики, без декоративного шума).
+- Форматы отчетов:
+  - Daily JSON (для интеграций и API)
+  - Daily HTML (для менеджмента/аналитики)
+  - Telegram summary + charts (опционально)
+- Режимы запуска:
+  - CLI (daily run / backfill)
+  - FastAPI endpoints
+  - APScheduler (ежедневный cron)
+
+## Архитектура
+
+```mermaid
+flowchart LR
+  A[Bot DB] --> B[Repository + Schema Mapping]
+  B --> C[Operational Metrics]
+  B --> D[Funnel Metrics]
+  B --> E[Intent & Behavior Metrics]
+  B --> F[Quality Metrics]
+  C --> G[Analytics Orchestrator]
+  D --> G
+  E --> G
+  F --> G
+  G --> H[Heuristic Insight Engine]
+  G --> I[LLM Insight Engine Optional]
+  G --> J[Chart Builder]
+  H --> K[Daily Report JSON/HTML]
+  I --> K
+  J --> K
+  K --> L[Telegram Delivery Optional]
+  K --> M[FastAPI Endpoints]
+```
+
+## Репозиторий
+
+```text
+.
+├── src/ai_sales_analytics/
+│   ├── analytics/
+│   │   ├── metrics/           # Operational/Funnel/Intent/Quality
+│   │   ├── insights/          # Heuristic + LLM
+│   │   ├── orchestrator.py
+│   │   └── pipeline.py
+│   ├── db/
+│   │   ├── repository.py      # Read-only data layer
+│   │   ├── schema_mapping.py  # Adapter layer
+│   │   └── contracts.py       # Canonical entities
+│   ├── visualization/charts.py
+│   ├── reporting/             # JSON/HTML + Telegram
+│   ├── api/routes.py          # FastAPI
+│   ├── scheduler/jobs.py      # APScheduler
+│   ├── cli.py                 # Typer CLI
+│   └── main.py
+├── config/schema_mapping.example.yaml
+├── tests/
+├── scripts/demo_seed.sql
+├── Dockerfile
+└── docker-compose.yml
+```
+
+## Метрики
+
+### 1) Операционная сводка
+- new leads
+- active dialogs
+- incoming / outgoing messages
+- new dialogs
+- meaningful conversations
+- target actions (booking/consult)
+- lost leads
+- handoff to human
+- returns after follow-up
+
+### 2) Воронка
+- leads by stage
+- stage transitions (daily)
+- stuck leads by stage
+- average dwell time by stage
+- overall conversion rate
+- step conversion rates
+- drop-off points
+
+### 3) Intents и поведение
+- intent distribution
+- top question categories
+- top objection categories
+- top services/interests
+- price questions
+- unclear/low-confidence cases
+- booking intents
+- contact sharing intents
+- ghosted leads
+- human handoff dialogs
+- loss reasons
+
+### 4) Качество бота
+- low confidence rate
+- no next step rate
+- no meaningful progress rate
+- handoff rate
+- follow-up return rate
+- avg dialog length
+- avg messages per lead
+- avg time to key action
+- avg time from first message to booking
+
+## Визуализации
+
+Генерируются PNG графики:
+- funnel by stage
+- stage distribution
+- new leads trend
+- conversion trend
+- intent distribution
+- top objections
+- top services/interests
+- follow-up returns trend
+- activity heatmap (weekday x hour)
+- drop-off points
+
+## Установка и запуск
+
+### 1. Requirements
+- Python 3.11+
+- Доступ к БД AI sales bot
+
+### 2. Install
+
+```bash
+python3 -m pip install -e .[dev]
+cp .env.example .env
+```
+
+### 3. Настроить `.env`
+
+Минимум:
+- `DATABASE_URL`
+- при нестандартной схеме: `SCHEMA_MAPPING_PATH`
+
+### 4. Настроить mapping под вашу БД
+
+Откройте `config/schema_mapping.example.yaml` и сопоставьте canonical поля с вашей схемой таблиц.
+
+### 5. Daily report (CLI)
+
+```bash
+ai-sales-analytics run-daily --report-date 2026-03-12
+```
+
+Артефакты:
+- `reports/YYYY-MM-DD/analytics.json`
+- `reports/YYYY-MM-DD/report.html`
+- `reports/YYYY-MM-DD/charts/*.png`
+
+### 6. API mode
+
+```bash
+ai-sales-analytics serve
+```
+
+Endpoints:
+- `GET /health`
+- `GET /analytics/daily?report_date=2026-03-12&send_telegram=false`
+
+### 7. Scheduler mode
+
+```bash
+ai-sales-analytics scheduler
+```
+
+Cron настраивается через `DAILY_REPORT_CRON`.
+
+## Telegram доставка
+
+Чтобы включить:
+- `SEND_TELEGRAM_REPORT=true`
+- `TELEGRAM_BOT_TOKEN=...`
+- `TELEGRAM_CHAT_ID=...`
+
+Система отправляет краткий summary + 3 главных графика.
+
+## Optional LLM insight layer
+
+Включение:
+- `ENABLE_LLM_INSIGHTS=true`
+- `OPENAI_API_KEY=...`
+- `OPENAI_MODEL=gpt-4.1-mini` (или другой)
+
+LLM используется только для human-readable управленческих выводов поверх рассчитанных метрик.
+
+## Тесты
+
+```bash
+python3 -m pytest
+```
+
+Покрыты ключевые блоки бизнес-логики:
+- operational metrics
+- funnel metrics
+- quality metrics
+
+## Docker
+
+```bash
+docker compose up --build
+```
+
+## Подключение к существующему AI-боту
+
+1. Укажите `DATABASE_URL` к production/staging БД.
+2. Настройте `schema_mapping.yaml` под реальные таблицы и поля.
+3. Запустите `run-daily` и проверьте generated report.
+4. После валидации включите scheduler и Telegram delivery.
+
+## Расширение проекта
+
+Легко добавить:
+- новые источники данных (CRM/call center/ads)
+- новые метрики и quality checks
+- новые каналы доставки (Slack/email/BI)
+- scoring моделей по lead quality
+- drift/anomaly detection в воронке
+
+## Примечания
+
+- Система проектирована как read-only аналитический модуль.
+- При отсутствии отдельных таблиц/полей аналитика деградирует gracefully и использует эвристики.
+- Секреты не хардкодятся, все через env.

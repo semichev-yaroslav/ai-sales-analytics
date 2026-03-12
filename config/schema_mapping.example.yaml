@@ -1,0 +1,66 @@
+# Canonical mapping from analytics module -> bot DB schema
+# Adjust table names and column names to your production bot schema.
+
+leads:
+  table: leads
+  columns:
+    id: id
+    created_at: created_at
+    updated_at: updated_at
+    stage: stage
+    status: status
+    lost_reason: lost_reason
+    target_action_at: target_action_at
+
+messages:
+  table: messages
+  columns:
+    id: id
+    lead_id: lead_id
+    created_at: created_at
+    direction: direction
+    role: role
+    text: text
+    intent: intent
+    confidence: confidence
+    service_topic: service_topic
+
+ai_runs:
+  table: ai_runs
+  columns:
+    id: id
+    lead_id: lead_id
+    created_at: created_at
+    intent: intent
+    confidence: confidence
+    handoff_to_human: handoff_to_human
+    status: status
+    latency_ms: latency_ms
+    prompt_tokens: prompt_tokens
+    completion_tokens: completion_tokens
+
+bookings:
+  table: bookings
+  columns:
+    id: id
+    lead_id: lead_id
+    created_at: created_at
+    service_name: service_name
+    status: status
+
+stage_events:
+  table: stage_events
+  columns:
+    id: id
+    lead_id: lead_id
+    changed_at: changed_at
+    from_stage: from_stage
+    to_stage: to_stage
+
+follow_ups:
+  table: follow_ups
+  columns:
+    id: id
+    lead_id: lead_id
+    sent_at: sent_at
+    response_at: response_at

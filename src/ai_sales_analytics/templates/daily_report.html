@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI Sales Analytics Report - {{ report.report_date }}</title>
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        margin: 24px;
+        color: #111827;
+        background: #f8fafc;
+      }
+      h1, h2, h3 {
+        margin: 0 0 12px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .metric {
+        font-size: 24px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+      .label {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .section {
+        margin-top: 24px;
+      }
+      .charts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 18px;
+      }
+      .chart {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+      }
+      .chart img {
+        width: 100%;
+        height: auto;
+      }
+      ul {
+        margin: 8px 0;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+      }
+      th, td {
+        border: 1px solid #e5e7eb;
+        padding: 8px;
+        text-align: left;
+        font-size: 14px;
+      }
+      th {
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AI Sales Analytics Daily Report</h1>
+    <p class="muted">Дата: {{ report.report_date }} | TZ: {{ report.timezone }}</p>
+
+    <div class="section">
+      <h2>1. Ключевые метрики дня</h2>
+      <div class="grid">
+        <div class="card"><div class="metric">{{ report.kpi.new_leads }}</div><div class="label">Новые лиды</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.active_dialogs }}</div><div class="label">Активные диалоги</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.incoming_messages }}</div><div class="label">Входящие сообщения</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.outgoing_messages }}</div><div class="label">Исходящие сообщения</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.target_actions }}</div><div class="label">Целевые действия</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.lost_leads }}</div><div class="label">Потерянные лиды</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.handoff_to_human }}</div><div class="label">Handoff to human</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.followup_returns }}</div><div class="label">Возвраты после follow-up</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>2. Воронка</h2>
+      <table>
+        <tr><th>Показатель</th><th>Значение</th></tr>
+        <tr><td>Общая конверсия</td><td>{{ report.funnel.overall_conversion_rate }}%</td></tr>
+        <tr><td>Лиды по стадиям</td><td>{{ report.funnel.leads_by_stage }}</td></tr>
+        <tr><td>Переходы стадий (день)</td><td>{{ report.funnel.stage_transitions }}</td></tr>
+        <tr><td>Точки отвала</td><td>{{ report.funnel.dropoff_points }}</td></tr>
+        <tr><td>Застрявшие лиды</td><td>{{ report.funnel.stuck_leads_by_stage }}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>3. Поведение и intents</h2>
+      <table>
+        <tr><th>Показатель</th><th>Значение</th></tr>
+        <tr><td>Top intents</td><td>{{ report.intents.intent_distribution }}</td></tr>
+        <tr><td>Top questions</td><td>{{ report.intents.top_question_categories }}</td></tr>
+        <tr><td>Top objections</td><td>{{ report.intents.top_objection_categories }}</td></tr>
+        <tr><td>Top services</td><td>{{ report.intents.top_services }}</td></tr>
+        <tr><td>Unclear cases</td><td>{{ report.intents.unclear_cases }}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>4. Качество работы бота</h2>
+      <table>
+        <tr><th>Метрика</th><th>Значение</th></tr>
+        <tr><td>Low confidence rate</td><td>{{ report.quality.low_confidence_rate }}%</td></tr>
+        <tr><td>No next step rate</td><td>{{ report.quality.no_next_step_rate }}%</td></tr>
+        <tr><td>No meaningful progress rate</td><td>{{ report.quality.no_meaningful_progress_rate }}%</td></tr>
+        <tr><td>Handoff rate</td><td>{{ report.quality.handoff_rate }}%</td></tr>
+        <tr><td>Follow-up return rate</td><td>{{ report.quality.followup_return_rate }}%</td></tr>
+        <tr><td>Avg dialog length</td><td>{{ report.quality.avg_dialog_length_messages }}</td></tr>
+        <tr><td>Avg time to key action (hours)</td><td>{{ report.quality.avg_time_to_key_action_hours }}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>5. Управленческие выводы</h2>
+      <h3>Ключевые выводы</h3>
+      <ul>
+        {% for item in report.insights.key_findings %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+
+      <h3>Рекомендации</h3>
+      <ul>
+        {% for item in report.insights.recommendations %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+
+      {% if report.insights.risk_flags %}
+        <h3>Риски</h3>
+        <ul>
+          {% for item in report.insights.risk_flags %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if report.insights.llm_summary %}
+        <h3>LLM Summary</h3>
+        <p>{{ report.insights.llm_summary }}</p>
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <h2>6. Графики</h2>
+      <div class="charts">
+        {% for chart in report.charts %}
+          <div class="chart">
+            <h3>{{ chart.chart_name }}</h3>
+            <img src="{{ chart.file_path }}" alt="{{ chart.chart_name }}" />
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </body>
+</html>
