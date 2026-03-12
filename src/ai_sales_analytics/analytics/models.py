@@ -22,6 +22,9 @@ class FunnelMetrics(BaseModel):
     stuck_leads_by_stage: dict[str, int] = Field(default_factory=dict)
     avg_stage_dwell_hours: dict[str, float] = Field(default_factory=dict)
     overall_conversion_rate: float = 0.0
+    conversion_target_actions: int = 0
+    conversion_conversational_leads: int = 0
+    conversion_formula: str = ""
     step_conversion_rates: dict[str, float] = Field(default_factory=dict)
     dropoff_points: dict[str, int] = Field(default_factory=dict)
 
@@ -53,6 +56,25 @@ class QualityMetrics(BaseModel):
     avg_time_first_message_to_booking_hours: float = 0.0
 
 
+class OverallMetrics(BaseModel):
+    period_start: str | None = None
+    period_end: str | None = None
+    total_leads: int = 0
+    total_dialogs: int = 0
+    total_incoming_messages: int = 0
+    total_outgoing_messages: int = 0
+    total_meaningful_dialogs: int = 0
+    total_target_actions: int = 0
+    total_lost_leads: int = 0
+    total_handoff_to_human: int = 0
+    total_followup_returns: int = 0
+    overall_conversion_rate: float = 0.0
+    conversion_numerator: int = 0
+    conversion_denominator: int = 0
+    conversion_formula: str = ""
+    avg_messages_per_dialog: float = 0.0
+
+
 class InsightBlock(BaseModel):
     key_findings: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
@@ -65,12 +87,39 @@ class ChartArtifact(BaseModel):
     file_path: str
 
 
+class DialogMessage(BaseModel):
+    timestamp: str
+    speaker: str
+    text: str
+    detected_intent: str | None = None
+    confidence: float | None = None
+
+
+class DialogReviewItem(BaseModel):
+    lead_id: str
+    stage: str
+    message_count: int
+    started_at: str
+    last_activity_at: str
+    risk_score: int = 0
+    risk_flags: list[str] = Field(default_factory=list)
+    transcript: list[DialogMessage] = Field(default_factory=list)
+
+
+class DialogReviewBlock(BaseModel):
+    total_dialogs: int = 0
+    risky_dialogs: int = 0
+    items: list[DialogReviewItem] = Field(default_factory=list)
+
+
 class DailyAnalyticsReport(BaseModel):
     report_date: str
     timezone: str
+    overall: OverallMetrics
     kpi: DailyKPI
     funnel: FunnelMetrics
     intents: IntentMetrics
     quality: QualityMetrics
     insights: InsightBlock
+    dialog_review: DialogReviewBlock = Field(default_factory=DialogReviewBlock)
     charts: list[ChartArtifact] = Field(default_factory=list)

@@ -41,6 +41,16 @@ class AnalyticsRepository:
             followups=self.fetch_followups(history_start, end),
         )
 
+    def fetch_bundle_all_time(self, end: datetime) -> DataBundle:
+        return DataBundle(
+            leads=self.fetch_leads_snapshot(end),
+            messages=self.fetch_messages(datetime(1970, 1, 1, tzinfo=end.tzinfo), end),
+            ai_runs=self.fetch_ai_runs(datetime(1970, 1, 1, tzinfo=end.tzinfo), end),
+            bookings=self.fetch_bookings(datetime(1970, 1, 1, tzinfo=end.tzinfo), end),
+            stage_events=self.fetch_stage_events(datetime(1970, 1, 1, tzinfo=end.tzinfo), end),
+            followups=self.fetch_followups(datetime(1970, 1, 1, tzinfo=end.tzinfo), end),
+        )
+
     def fetch_leads_snapshot(self, end: datetime) -> list[LeadRecord]:
         rows = self._select_rows(
             table_mapping=self.mapping.leads,

@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
+from ai_sales_analytics.analytics.dialog_review import DialogReviewService
 from ai_sales_analytics.analytics.insights.heuristic import HeuristicInsightEngine
 from ai_sales_analytics.analytics.insights.llm import LLMInsightEngine
 from ai_sales_analytics.analytics.metrics.funnel import FunnelAnalyticsService
 from ai_sales_analytics.analytics.metrics.intents import IntentAnalyticsService
 from ai_sales_analytics.analytics.metrics.operational import OperationalMetricsService
+from ai_sales_analytics.analytics.metrics.overall import OverallMetricsService
 from ai_sales_analytics.analytics.metrics.quality import QualityAnalyticsService
 from ai_sales_analytics.analytics.models import DailyAnalyticsReport
 from ai_sales_analytics.config import Settings
@@ -30,12 +32,16 @@ class AnalyticsOrchestrator:
         self.settings = settings
 
         self.operational_service = OperationalMetricsService()
+        self.overall_service = OverallMetricsService()
         self.funnel_service = FunnelAnalyticsService(stuck_stage_days=settings.stuck_stage_days)
         self.intent_service = IntentAnalyticsService(
             low_confidence_threshold=settings.low_confidence_threshold,
             lost_lead_inactivity_hours=settings.lost_lead_inactivity_hours,
         )
         self.quality_service = QualityAnalyticsService(low_confidence_threshold=settings.low_confidence_threshold)
+        self.dialog_review_service = DialogReviewService(
+            low_confidence_threshold=settings.low_confidence_threshold
+        )
         self.heuristic_insights = HeuristicInsightEngine()
 
         self.llm_engine: LLMInsightEngine | None = None
@@ -46,44 +52,54 @@ class AnalyticsOrchestrator:
         day = daily_window(report_date, self.settings.default_timezone)
         history = lookback_window(report_date, self.settings.default_timezone, self.settings.lookback_days)
 
-        bundle = self.repository.fetch_bundle(history.start, day.end)
+        history_bundle = self.repository.fetch_bundle(history.start, day.end)
+        all_time_bundle = self.repository.fetch_bundle_all_time(day.end)
 
         kpi = self.operational_service.calculate(
-            leads=bundle.leads,
-            messages=bundle.messages,
-            ai_runs=bundle.ai_runs,
-            bookings=bundle.bookings,
-            followups=bundle.followups,
-            stage_events=bundle.stage_events,
+            leads=all_time_bundle.leads,
+            messages=all_time_bundle.messages,
+            ai_runs=all_time_bundle.ai_runs,
+            bookings=all_time_bundle.bookings,
+            followups=all_time_bundle.followups,
+            stage_events=all_time_bundle.stage_events,
             day_start=day.start,
             day_end=day.end,
         )
 
+        overall = self.overall_service.calculate(
+            leads=all_time_bundle.leads,
+            messages=all_time_bundle.messages,
+            ai_runs=all_time_bundle.ai_runs,
+            bookings=all_time_bundle.bookings,
+            followups=all_time_bundle.followups,
+            day_end=day.end,
+        )
+
         funnel = self.funnel_service.calculate(
-            leads=bundle.leads,
-            messages=bundle.messages,
-            ai_runs=bundle.ai_runs,
-            bookings=bundle.bookings,
-            stage_events=bundle.stage_events,
+            leads=all_time_bundle.leads,
+            messages=all_time_bundle.messages,
+            ai_runs=all_time_bundle.ai_runs,
+            bookings=all_time_bundle.bookings,
+            stage_events=all_time_bundle.stage_events,
             day_start=day.start,
             day_end=day.end,
         )
 
         intents = self.intent_service.calculate(
-            leads=bundle.leads,
-            messages=bundle.messages,
-            ai_runs=bundle.ai_runs,
-            bookings=bundle.bookings,
+            leads=all_time_bundle.leads,
+            messages=all_time_bundle.messages,
+            ai_runs=all_time_bundle.ai_runs,
+            bookings=all_time_bundle.bookings,
             day_start=day.start,
             day_end=day.end,
         )
 
         quality = self.quality_service.calculate(
-            messages=bundle.messages,
-            ai_runs=bundle.ai_runs,
-            bookings=bundle.bookings,
-            stage_events=bundle.stage_events,
-            followups=bundle.followups,
+            messages=all_time_bundle.messages,
+            ai_runs=all_time_bundle.ai_runs,
+            bookings=all_time_bundle.bookings,
+            stage_events=all_time_bundle.stage_events,
+            followups=all_time_bundle.followups,
             day_start=day.start,
             day_end=day.end,
         )
@@ -91,11 +107,20 @@ class AnalyticsOrchestrator:
         report = DailyAnalyticsReport(
             report_date=report_date.isoformat(),
             timezone=self.settings.default_timezone,
+            overall=overall,
             kpi=kpi,
             funnel=funnel,
             intents=intents,
             quality=quality,
             insights=self.heuristic_insights.generate(kpi=kpi, funnel=funnel, intents=intents, quality=quality),
+            dialog_review=self.dialog_review_service.build_daily(
+                leads=all_time_bundle.leads,
+                messages=all_time_bundle.messages,
+                ai_runs=all_time_bundle.ai_runs,
+                day_start=day.start,
+                day_end=day.end,
+                limit=50,
+            ),
             charts=[],
         )
 
@@ -110,4 +135,4 @@ class AnalyticsOrchestrator:
             }
             report.insights.llm_summary = self.llm_engine.generate_summary(payload)
 
-        return AnalyticsResult(report=report, bundle=bundle, day_window=day, history_window=history)
+        return AnalyticsResult(report=report, bundle=history_bundle, day_window=day, history_window=history)

@@ -6,6 +6,14 @@ import orjson
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ai_sales_analytics.analytics.models import DailyAnalyticsReport
+from ai_sales_analytics.localization import (
+    generic_label,
+    intent_label,
+    objection_category_label,
+    question_category_label,
+    stage_label,
+    stage_transition_label,
+)
 
 
 class ReportWriter:
@@ -17,6 +25,14 @@ class ReportWriter:
         self.jinja = Environment(
             loader=FileSystemLoader(template_dir),
             autoescape=select_autoescape(["html", "xml"]),
+        )
+        self.jinja.globals.update(
+            stage_label=stage_label,
+            stage_transition_label=stage_transition_label,
+            intent_label=intent_label,
+            question_category_label=question_category_label,
+            objection_category_label=objection_category_label,
+            generic_label=generic_label,
         )
 
     def prepare_daily_dir(self, report_date: str) -> Path:

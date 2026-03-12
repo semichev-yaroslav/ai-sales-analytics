@@ -12,3 +12,4 @@ reports/
 htmlcov/
 .DS_Store
 *.egg-info/
+data/*.db

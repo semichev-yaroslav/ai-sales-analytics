@@ -123,14 +123,26 @@ class FunnelAnalyticsService:
         }
 
         conversational_leads = {msg.lead_id for msg in messages if msg.created_at < day_end}
-        booked_leads = {
+        booked_from_bookings = {
             booking.lead_id
             for booking in bookings
             if booking.created_at < day_end and (booking.status or "confirmed").lower() != "cancelled"
         }
+        booked_from_leads = {
+            lead.lead_id
+            for lead in leads
+            if (
+                (lead.target_action_at is not None and lead.target_action_at < day_end)
+                or (lead.stage or "").strip().lower() == "booked"
+            )
+        }
+        booked_leads = booked_from_bookings | booked_from_leads
+        converted_conversational = booked_leads & conversational_leads
 
         overall_conversion = (
-            round((len(booked_leads) / len(conversational_leads)) * 100, 2) if conversational_leads else 0.0
+            round((len(converted_conversational) / len(conversational_leads)) * 100, 2)
+            if conversational_leads
+            else 0.0
         )
 
         reached_stage = defaultdict(set)
@@ -156,6 +168,9 @@ class FunnelAnalyticsService:
             stuck_leads_by_stage=dict(stuck_leads_by_stage),
             avg_stage_dwell_hours=avg_dwell,
             overall_conversion_rate=overall_conversion,
+            conversion_target_actions=len(converted_conversational),
+            conversion_conversational_leads=len(conversational_leads),
+            conversion_formula="конверсия = лиды с целевым действием / лиды с диалогом * 100%",
             step_conversion_rates=step_conversion_rates,
             dropoff_points=dict(dropoff_points),
         )

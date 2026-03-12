@@ -5,15 +5,35 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
 from ai_sales_analytics.analytics.models import ChartArtifact, DailyAnalyticsReport
 from ai_sales_analytics.db.contracts import DataBundle
+from ai_sales_analytics.localization import (
+    intent_label,
+    objection_category_label,
+    stage_label,
+    weekday_label,
+)
+
+matplotlib.use("Agg")
 
 logger = logging.getLogger(__name__)
 sns.set_theme(style="whitegrid")
+
+WEEKDAY_ORDER_EN = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
+WEEKDAY_ORDER_RU = [weekday_label(day) for day in WEEKDAY_ORDER_EN]
 
 
 class ChartBuilder:
@@ -43,8 +63,8 @@ class ChartBuilder:
 
         return [chart for chart in artifacts if chart.file_path]
 
-    def _save_current_figure(self, chart_name: str) -> ChartArtifact:
-        path = self.output_dir / f"{chart_name}.png"
+    def _save_current_figure(self, file_stem: str, chart_name: str) -> ChartArtifact:
+        path = self.output_dir / f"{file_stem}.png"
         plt.tight_layout()
         plt.savefig(path, dpi=160)
         plt.close()
@@ -53,49 +73,58 @@ class ChartBuilder:
     @staticmethod
     def _plot_empty_state(title: str) -> None:
         plt.figure(figsize=(8, 4))
-        plt.text(0.5, 0.5, "No data", fontsize=14, ha="center", va="center")
+        plt.text(0.5, 0.5, "Нет данных", fontsize=14, ha="center", va="center")
         plt.title(title)
         plt.axis("off")
 
     def _funnel_chart(self, report: DailyAnalyticsReport) -> ChartArtifact:
+        chart_name = "Воронка продаж по стадиям"
         data = report.funnel.leads_by_stage
         if not data:
-            self._plot_empty_state("Funnel by Stage")
-            return self._save_current_figure("funnel_stages")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("funnel_stages", chart_name)
 
         order = sorted(data.items(), key=lambda x: x[1], reverse=True)
         labels, values = zip(*order, strict=False)
+        labels_ru = [stage_label(item) for item in labels]
         plt.figure(figsize=(9, 5))
         sns.barplot(
-            x=list(labels),
+            x=list(labels_ru),
             y=list(values),
-            hue=list(labels),
+            hue=list(labels_ru),
             palette="Blues_d",
             legend=False,
         )
-        plt.title("Sales Funnel by Stage")
-        plt.xlabel("Stage")
-        plt.ylabel("Leads")
+        plt.title(chart_name)
+        plt.xlabel("Стадия")
+        plt.ylabel("Количество лидов")
         plt.xticks(rotation=20)
-        return self._save_current_figure("funnel_stages")
+        return self._save_current_figure("funnel_stages", chart_name)
 
     def _stage_distribution_chart(self, report: DailyAnalyticsReport) -> ChartArtifact:
+        chart_name = "Распределение лидов по стадиям"
         data = report.funnel.leads_by_stage
         if not data:
-            self._plot_empty_state("Stage Distribution")
-            return self._save_current_figure("stage_distribution")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("stage_distribution", chart_name)
 
+        labels_ru = [stage_label(stage) for stage in data.keys()]
         plt.figure(figsize=(7, 7))
-        plt.pie(data.values(), labels=data.keys(), autopct="%1.1f%%", startangle=140)
-        plt.title("Lead Distribution by Stage")
-        return self._save_current_figure("stage_distribution")
+        plt.pie(data.values(), labels=labels_ru, autopct="%1.1f%%", startangle=140)
+        plt.title(chart_name)
+        return self._save_current_figure("stage_distribution", chart_name)
 
     def _leads_trend_chart(self, bundle: DataBundle, history_start: datetime, day_end: datetime) -> ChartArtifact:
-        rows = [lead.created_at for lead in bundle.leads if lead.created_at and history_start <= lead.created_at < day_end]
+        chart_name = "Динамика новых лидов"
+        rows = [
+            lead.created_at
+            for lead in bundle.leads
+            if lead.created_at and history_start <= lead.created_at < day_end
+        ]
 
         if not rows:
-            self._plot_empty_state("New Leads Trend")
-            return self._save_current_figure("new_leads_trend")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("new_leads_trend", chart_name)
 
         df = pd.DataFrame({"created_at": pd.to_datetime(rows)})
         df["date"] = df["created_at"].dt.date
@@ -103,23 +132,29 @@ class ChartBuilder:
 
         plt.figure(figsize=(10, 4))
         plt.plot(series.index, series.values, marker="o", color="#2563eb")
-        plt.title("New Leads by Day")
-        plt.xlabel("Date")
-        plt.ylabel("Leads")
+        plt.title(chart_name)
+        plt.xlabel("Дата")
+        plt.ylabel("Количество лидов")
         plt.xticks(rotation=20)
-        return self._save_current_figure("new_leads_trend")
+        return self._save_current_figure("new_leads_trend", chart_name)
 
     def _conversion_trend_chart(self, bundle: DataBundle, history_start: datetime, day_end: datetime) -> ChartArtifact:
-        lead_dates = [lead.created_at.date() for lead in bundle.leads if lead.created_at and history_start <= lead.created_at < day_end]
+        chart_name = "Динамика конверсии"
+        lead_dates = [
+            lead.created_at.date()
+            for lead in bundle.leads
+            if lead.created_at and history_start <= lead.created_at < day_end
+        ]
         booking_dates = [
             booking.created_at.date()
             for booking in bundle.bookings
-            if history_start <= booking.created_at < day_end and (booking.status or "confirmed").lower() != "cancelled"
+            if history_start <= booking.created_at < day_end
+            and (booking.status or "confirmed").lower() != "cancelled"
         ]
 
         if not lead_dates:
-            self._plot_empty_state("Daily Conversion Trend")
-            return self._save_current_figure("conversion_trend")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("conversion_trend", chart_name)
 
         lead_counter = Counter(lead_dates)
         booking_counter = Counter(booking_dates)
@@ -134,60 +169,65 @@ class ChartBuilder:
 
         plt.figure(figsize=(10, 4))
         plt.plot(all_days, rates, marker="o", color="#0ea5e9")
-        plt.title("Daily Conversion Rate (Booking / New Leads)")
-        plt.xlabel("Date")
-        plt.ylabel("Conversion %")
+        plt.title(chart_name)
+        plt.xlabel("Дата")
+        plt.ylabel("Конверсия, %")
         plt.xticks(rotation=20)
-        return self._save_current_figure("conversion_trend")
+        return self._save_current_figure("conversion_trend", chart_name)
 
     def _intent_distribution_chart(self, report: DailyAnalyticsReport) -> ChartArtifact:
+        chart_name = "Распределение интентов"
         data = report.intents.intent_distribution
         if not data:
-            self._plot_empty_state("Intent Distribution")
-            return self._save_current_figure("intent_distribution")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("intent_distribution", chart_name)
 
         sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)[:10]
         labels, values = zip(*sorted_items, strict=False)
+        labels_ru = [intent_label(item) for item in labels]
         plt.figure(figsize=(10, 4))
         sns.barplot(
-            x=list(labels),
+            x=list(labels_ru),
             y=list(values),
-            hue=list(labels),
+            hue=list(labels_ru),
             palette="viridis",
             legend=False,
         )
-        plt.title("Intent Distribution")
-        plt.xlabel("Intent")
-        plt.ylabel("Count")
+        plt.title(chart_name)
+        plt.xlabel("Интент")
+        plt.ylabel("Количество")
         plt.xticks(rotation=20)
-        return self._save_current_figure("intent_distribution")
+        return self._save_current_figure("intent_distribution", chart_name)
 
     def _objections_chart(self, report: DailyAnalyticsReport) -> ChartArtifact:
+        chart_name = "Топ категорий возражений"
         data = report.intents.top_objection_categories
         if not data:
-            self._plot_empty_state("Top Objections")
-            return self._save_current_figure("top_objections")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("top_objections", chart_name)
 
         labels, values = zip(*data.items(), strict=False)
+        labels_ru = [objection_category_label(item) for item in labels]
         plt.figure(figsize=(9, 4))
         sns.barplot(
-            x=list(labels),
+            x=list(labels_ru),
             y=list(values),
-            hue=list(labels),
+            hue=list(labels_ru),
             palette="Reds",
             legend=False,
         )
-        plt.title("Top Objection Categories")
-        plt.xlabel("Category")
-        plt.ylabel("Count")
+        plt.title(chart_name)
+        plt.xlabel("Категория")
+        plt.ylabel("Количество")
         plt.xticks(rotation=20)
-        return self._save_current_figure("top_objections")
+        return self._save_current_figure("top_objections", chart_name)
 
     def _services_chart(self, report: DailyAnalyticsReport) -> ChartArtifact:
+        chart_name = "Топ услуг и тем интереса"
         data = report.intents.top_services
         if not data:
-            self._plot_empty_state("Top Services / Interests")
-            return self._save_current_figure("top_services")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("top_services", chart_name)
 
         labels, values = zip(*data.items(), strict=False)
         plt.figure(figsize=(9, 4))
@@ -198,13 +238,14 @@ class ChartBuilder:
             palette="mako",
             legend=False,
         )
-        plt.title("Top Services / Interests")
-        plt.xlabel("Service / Topic")
-        plt.ylabel("Mentions")
+        plt.title(chart_name)
+        plt.xlabel("Услуга / тема")
+        plt.ylabel("Упоминаний")
         plt.xticks(rotation=20)
-        return self._save_current_figure("top_services")
+        return self._save_current_figure("top_services", chart_name)
 
     def _followup_returns_chart(self, bundle: DataBundle, history_start: datetime, day_end: datetime) -> ChartArtifact:
+        chart_name = "Возвраты после повторного контакта"
         rows = [
             fu.response_at.date()
             for fu in bundle.followups
@@ -212,8 +253,8 @@ class ChartBuilder:
         ]
 
         if not rows:
-            self._plot_empty_state("Returns After Follow-Up")
-            return self._save_current_figure("followup_returns")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("followup_returns", chart_name)
 
         counts = Counter(rows)
         days = sorted(counts.keys())
@@ -221,13 +262,14 @@ class ChartBuilder:
 
         plt.figure(figsize=(10, 4))
         plt.bar(days, values, color="#22c55e")
-        plt.title("Follow-Up Returns by Day")
-        plt.xlabel("Date")
-        plt.ylabel("Returned Leads")
+        plt.title(chart_name)
+        plt.xlabel("Дата")
+        plt.ylabel("Количество возвратов")
         plt.xticks(rotation=20)
-        return self._save_current_figure("followup_returns")
+        return self._save_current_figure("followup_returns", chart_name)
 
     def _activity_heatmap(self, bundle: DataBundle, history_start: datetime, day_end: datetime) -> ChartArtifact:
+        chart_name = "Тепловая карта активности диалогов"
         points = [
             msg.created_at
             for msg in bundle.messages
@@ -235,8 +277,8 @@ class ChartBuilder:
         ]
 
         if not points:
-            self._plot_empty_state("Dialog Activity Heatmap")
-            return self._save_current_figure("activity_heatmap")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("activity_heatmap", chart_name)
 
         df = pd.DataFrame({"created_at": pd.to_datetime(points)})
         df["weekday"] = df["created_at"].dt.day_name()
@@ -251,33 +293,36 @@ class ChartBuilder:
             fill_value=0,
         )
 
-        weekday_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        table = table.reindex(weekday_order, fill_value=0)
+        table.index = [weekday_label(day) for day in table.index]
+        table = table.reindex(WEEKDAY_ORDER_RU, fill_value=0)
 
         plt.figure(figsize=(12, 4))
         sns.heatmap(table, cmap="YlGnBu", linewidths=0.5)
-        plt.title("Dialog Activity by Weekday and Hour")
-        plt.xlabel("Hour")
-        plt.ylabel("Weekday")
-        return self._save_current_figure("activity_heatmap")
+        plt.title(chart_name)
+        plt.xlabel("Час")
+        plt.ylabel("День недели")
+        return self._save_current_figure("activity_heatmap", chart_name)
 
     def _dropoff_chart(self, report: DailyAnalyticsReport) -> ChartArtifact:
+        chart_name = "Точки потери лидов по стадиям"
         data = report.funnel.dropoff_points
         if not data:
-            self._plot_empty_state("Drop-Off Points")
-            return self._save_current_figure("dropoff_points")
+            self._plot_empty_state(chart_name)
+            return self._save_current_figure("dropoff_points", chart_name)
 
-        labels, values = zip(*sorted(data.items(), key=lambda x: x[1], reverse=True), strict=False)
+        sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)
+        labels, values = zip(*sorted_items, strict=False)
+        labels_ru = [stage_label(item) for item in labels]
         plt.figure(figsize=(9, 4))
         sns.barplot(
-            x=list(labels),
+            x=list(labels_ru),
             y=list(values),
-            hue=list(labels),
+            hue=list(labels_ru),
             palette="rocket",
             legend=False,
         )
-        plt.title("Lead Drop-Off by Stage")
-        plt.xlabel("Stage")
-        plt.ylabel("Lost Leads")
+        plt.title(chart_name)
+        plt.xlabel("Стадия")
+        plt.ylabel("Потерянные лиды")
         plt.xticks(rotation=20)
-        return self._save_current_figure("dropoff_points")
+        return self._save_current_figure("dropoff_points", chart_name)

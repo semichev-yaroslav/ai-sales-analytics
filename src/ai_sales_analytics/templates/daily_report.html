@@ -2,7 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <title>AI Sales Analytics Report - {{ report.report_date }}</title>
+    <title>Ежедневный отчет AI Sales Analytics - {{ report.report_date }}</title>
     <style>
       body {
         font-family: "Segoe UI", sans-serif;
@@ -15,7 +15,7 @@
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 12px;
       }
       .card {
@@ -36,20 +36,30 @@
       .section {
         margin-top: 24px;
       }
-      .charts {
+      .section-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-        gap: 18px;
+        gap: 14px;
+      }
+      .charts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
       }
       .chart {
         background: #ffffff;
         border: 1px solid #e5e7eb;
         border-radius: 10px;
-        padding: 12px;
+        padding: 14px;
       }
       .chart img {
         width: 100%;
         height: auto;
+      }
+      @media (max-width: 1200px) {
+        .charts {
+          grid-template-columns: 1fr;
+        }
       }
       ul {
         margin: 8px 0;
@@ -74,63 +84,150 @@
     </style>
   </head>
   <body>
-    <h1>AI Sales Analytics Daily Report</h1>
-    <p class="muted">Дата: {{ report.report_date }} | TZ: {{ report.timezone }}</p>
+    <h1>Ежедневный отчет по продажам AI-бота</h1>
+    <p class="muted">Дата: {{ report.report_date }} | Часовой пояс: {{ report.timezone }}</p>
 
     <div class="section">
-      <h2>1. Ключевые метрики дня</h2>
+      <h2>1. Общая результативность за все время</h2>
+      <div class="grid">
+        <div class="card"><div class="metric">{{ report.overall.total_leads }}</div><div class="label">Лидов всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.total_dialogs }}</div><div class="label">Диалогов всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.total_incoming_messages }}</div><div class="label">Входящих сообщений всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.total_outgoing_messages }}</div><div class="label">Исходящих сообщений всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.total_target_actions }}</div><div class="label">Целевых действий всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.total_lost_leads }}</div><div class="label">Потерянных лидов всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.total_handoff_to_human }}</div><div class="label">Передач менеджеру всего</div></div>
+        <div class="card"><div class="metric">{{ report.overall.overall_conversion_rate }}%</div><div class="label">Конверсия за все время</div></div>
+      </div>
+      <table>
+        <tr><th>Пояснение</th><th>Значение</th></tr>
+        <tr><td>Период</td><td>{{ report.overall.period_start }} — {{ report.overall.period_end }}</td></tr>
+        <tr><td>Числитель конверсии</td><td>{{ report.overall.conversion_numerator }}</td></tr>
+        <tr><td>Знаменатель конверсии</td><td>{{ report.overall.conversion_denominator }}</td></tr>
+        <tr><td>Формула</td><td>{{ report.overall.conversion_formula }}</td></tr>
+        <tr><td>Среднее сообщений на диалог</td><td>{{ report.overall.avg_messages_per_dialog }}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>2. Подробный отчет за день (оперативный контроль)</h2>
       <div class="grid">
         <div class="card"><div class="metric">{{ report.kpi.new_leads }}</div><div class="label">Новые лиды</div></div>
         <div class="card"><div class="metric">{{ report.kpi.active_dialogs }}</div><div class="label">Активные диалоги</div></div>
         <div class="card"><div class="metric">{{ report.kpi.incoming_messages }}</div><div class="label">Входящие сообщения</div></div>
-        <div class="card"><div class="metric">{{ report.kpi.outgoing_messages }}</div><div class="label">Исходящие сообщения</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.outgoing_messages }}</div><div class="label">Исходящие сообщения бота</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.new_dialogs }}</div><div class="label">Новые диалоги</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.meaningful_conversations }}</div><div class="label">Осмысленные диалоги</div></div>
         <div class="card"><div class="metric">{{ report.kpi.target_actions }}</div><div class="label">Целевые действия</div></div>
         <div class="card"><div class="metric">{{ report.kpi.lost_leads }}</div><div class="label">Потерянные лиды</div></div>
-        <div class="card"><div class="metric">{{ report.kpi.handoff_to_human }}</div><div class="label">Handoff to human</div></div>
-        <div class="card"><div class="metric">{{ report.kpi.followup_returns }}</div><div class="label">Возвраты после follow-up</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.handoff_to_human }}</div><div class="label">Передачи менеджеру</div></div>
+        <div class="card"><div class="metric">{{ report.kpi.followup_returns }}</div><div class="label">Возвраты после повторного контакта</div></div>
       </div>
     </div>
 
     <div class="section">
-      <h2>2. Воронка</h2>
-      <table>
-        <tr><th>Показатель</th><th>Значение</th></tr>
-        <tr><td>Общая конверсия</td><td>{{ report.funnel.overall_conversion_rate }}%</td></tr>
-        <tr><td>Лиды по стадиям</td><td>{{ report.funnel.leads_by_stage }}</td></tr>
-        <tr><td>Переходы стадий (день)</td><td>{{ report.funnel.stage_transitions }}</td></tr>
-        <tr><td>Точки отвала</td><td>{{ report.funnel.dropoff_points }}</td></tr>
-        <tr><td>Застрявшие лиды</td><td>{{ report.funnel.stuck_leads_by_stage }}</td></tr>
-      </table>
+      <h2>3. Воронка продаж</h2>
+      <div class="section-grid">
+        <div>
+          <table>
+            <tr><th>Показатель</th><th>Значение</th></tr>
+            <tr><td>Общая конверсия</td><td>{{ report.funnel.overall_conversion_rate }}%</td></tr>
+            <tr>
+              <td>Числитель конверсии (лиды с целевым действием)</td>
+              <td>{{ report.funnel.conversion_target_actions }}</td>
+            </tr>
+            <tr>
+              <td>Знаменатель конверсии (лиды с диалогом)</td>
+              <td>{{ report.funnel.conversion_conversational_leads }}</td>
+            </tr>
+            <tr><td>Формула</td><td>{{ report.funnel.conversion_formula }}</td></tr>
+          </table>
+          <table>
+            <tr><th>Стадия</th><th>Лидов</th></tr>
+            {% for stage, count in report.funnel.leads_by_stage.items() %}
+              <tr><td>{{ stage_label(stage) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <table>
+            <tr><th>Переход между стадиями</th><th>Количество</th></tr>
+            {% for transition, count in report.funnel.stage_transitions.items() %}
+              <tr><td>{{ stage_transition_label(transition) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+          <table>
+            <tr><th>Точка потери</th><th>Количество</th></tr>
+            {% for stage, count in report.funnel.dropoff_points.items() %}
+              <tr><td>{{ stage_label(stage) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="section">
-      <h2>3. Поведение и intents</h2>
-      <table>
-        <tr><th>Показатель</th><th>Значение</th></tr>
-        <tr><td>Top intents</td><td>{{ report.intents.intent_distribution }}</td></tr>
-        <tr><td>Top questions</td><td>{{ report.intents.top_question_categories }}</td></tr>
-        <tr><td>Top objections</td><td>{{ report.intents.top_objection_categories }}</td></tr>
-        <tr><td>Top services</td><td>{{ report.intents.top_services }}</td></tr>
-        <tr><td>Unclear cases</td><td>{{ report.intents.unclear_cases }}</td></tr>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>4. Качество работы бота</h2>
+      <h2>4. Поведение клиентов и интенты</h2>
+      <div class="section-grid">
+        <div>
+          <table>
+            <tr><th>Интент</th><th>Количество</th></tr>
+            {% for intent, count in report.intents.intent_distribution.items() %}
+              <tr><td>{{ intent_label(intent) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+          <table>
+            <tr><th>Категория вопроса</th><th>Количество</th></tr>
+            {% for category, count in report.intents.top_question_categories.items() %}
+              <tr><td>{{ question_category_label(category) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <table>
+            <tr><th>Категория возражения</th><th>Количество</th></tr>
+            {% for category, count in report.intents.top_objection_categories.items() %}
+              <tr><td>{{ objection_category_label(category) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+          <table>
+            <tr><th>Тема / услуга</th><th>Количество</th></tr>
+            {% for service, count in report.intents.top_services.items() %}
+              <tr><td>{{ generic_label(service) }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
       <table>
         <tr><th>Метрика</th><th>Значение</th></tr>
-        <tr><td>Low confidence rate</td><td>{{ report.quality.low_confidence_rate }}%</td></tr>
-        <tr><td>No next step rate</td><td>{{ report.quality.no_next_step_rate }}%</td></tr>
-        <tr><td>No meaningful progress rate</td><td>{{ report.quality.no_meaningful_progress_rate }}%</td></tr>
-        <tr><td>Handoff rate</td><td>{{ report.quality.handoff_rate }}%</td></tr>
-        <tr><td>Follow-up return rate</td><td>{{ report.quality.followup_return_rate }}%</td></tr>
-        <tr><td>Avg dialog length</td><td>{{ report.quality.avg_dialog_length_messages }}</td></tr>
-        <tr><td>Avg time to key action (hours)</td><td>{{ report.quality.avg_time_to_key_action_hours }}</td></tr>
+        <tr><td>Вопросы о цене</td><td>{{ report.intents.price_questions }}</td></tr>
+        <tr><td>Возражения</td><td>{{ report.intents.objections }}</td></tr>
+        <tr><td>Нераспознанные случаи</td><td>{{ report.intents.unclear_cases }}</td></tr>
+        <tr><td>Намерения записаться</td><td>{{ report.intents.booking_intents }}</td></tr>
+        <tr><td>Передача контактов</td><td>{{ report.intents.contact_sharing_intents }}</td></tr>
+        <tr><td>Лиды, переставшие отвечать</td><td>{{ report.intents.ghosted_leads }}</td></tr>
+        <tr><td>Диалоги с передачей менеджеру</td><td>{{ report.intents.human_handoff_dialogs }}</td></tr>
       </table>
     </div>
 
     <div class="section">
-      <h2>5. Управленческие выводы</h2>
+      <h2>5. Качество работы бота</h2>
+      <table>
+        <tr><th>Метрика</th><th>Значение</th></tr>
+        <tr><td>Доля неуверенных / нераспознанных случаев</td><td>{{ report.quality.low_confidence_rate }}%</td></tr>
+        <tr><td>Доля диалогов без следующего шага</td><td>{{ report.quality.no_next_step_rate }}%</td></tr>
+        <tr><td>Доля диалогов без прогресса</td><td>{{ report.quality.no_meaningful_progress_rate }}%</td></tr>
+        <tr><td>Доля передач менеджеру</td><td>{{ report.quality.handoff_rate }}%</td></tr>
+        <tr><td>Доля возвратов после повторного контакта</td><td>{{ report.quality.followup_return_rate }}%</td></tr>
+        <tr><td>Средняя длина диалога (сообщений)</td><td>{{ report.quality.avg_dialog_length_messages }}</td></tr>
+        <tr><td>Среднее число сообщений на лида</td><td>{{ report.quality.avg_messages_per_lead }}</td></tr>
+        <tr><td>Среднее время до ключевого действия (часы)</td><td>{{ report.quality.avg_time_to_key_action_hours }}</td></tr>
+        <tr><td>Среднее время от первого сообщения до записи (часы)</td><td>{{ report.quality.avg_time_first_message_to_booking_hours }}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>6. Управленческие выводы и рекомендации</h2>
       <h3>Ключевые выводы</h3>
       <ul>
         {% for item in report.insights.key_findings %}
@@ -146,7 +243,7 @@
       </ul>
 
       {% if report.insights.risk_flags %}
-        <h3>Риски</h3>
+        <h3>Зоны риска</h3>
         <ul>
           {% for item in report.insights.risk_flags %}
             <li>{{ item }}</li>
@@ -155,13 +252,13 @@
       {% endif %}
 
       {% if report.insights.llm_summary %}
-        <h3>LLM Summary</h3>
+        <h3>AI-резюме</h3>
         <p>{{ report.insights.llm_summary }}</p>
       {% endif %}
     </div>
 
     <div class="section">
-      <h2>6. Графики</h2>
+      <h2>7. Графики</h2>
       <div class="charts">
         {% for chart in report.charts %}
           <div class="chart">
@@ -170,6 +267,55 @@
           </div>
         {% endfor %}
       </div>
+    </div>
+
+    <div class="section">
+      <h2>8. Диалоги для проверки менеджером</h2>
+      <p class="muted">
+        Всего диалогов за день: {{ report.dialog_review.total_dialogs }} |
+        Диалогов с риском: {{ report.dialog_review.risky_dialogs }} |
+        В отчете показаны первые 10 наиболее рискованных диалогов.
+      </p>
+      {% if report.dialog_review["items"] %}
+        {% for item in report.dialog_review["items"][:10] %}
+          <div class="card" style="margin-bottom: 12px;">
+            <h3 style="margin-bottom: 6px;">
+              Лид {{ item.lead_id }} | Стадия: {{ stage_label(item.stage) }} | Риск: {{ item.risk_score }}
+            </h3>
+            <p class="muted" style="margin: 0 0 8px 0;">
+              Сообщений: {{ item.message_count }} |
+              Начало: {{ item.started_at }} |
+              Последняя активность: {{ item.last_activity_at }}
+            </p>
+            <p><strong>Почему в списке:</strong></p>
+            <ul>
+              {% for flag in item.risk_flags %}
+                <li>{{ flag }}</li>
+              {% endfor %}
+            </ul>
+            <details>
+              <summary>Показать переписку</summary>
+              <ul>
+                {% for msg in item.transcript %}
+                  <li>
+                    <strong>{{ msg.timestamp }} | {{ msg.speaker }}:</strong>
+                    {{ msg.text }}
+                    {% if msg.detected_intent %}
+                      <br />
+                      <span class="muted">
+                        Интент: {{ intent_label(msg.detected_intent) }}
+                        {% if msg.confidence is not none %} | Уверенность: {{ msg.confidence }}{% endif %}
+                      </span>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </details>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">За выбранную дату диалогов не найдено.</p>
+      {% endif %}
     </div>
   </body>
 </html>
