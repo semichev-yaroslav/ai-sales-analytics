@@ -170,10 +170,36 @@ class AnalyticsRepository:
             return None
         if isinstance(raw, bool):
             return raw
+        if isinstance(raw, dict):
+            bool_keys = [
+                "handoff_to_human",
+                "handoff_to_admin",
+                "handoff",
+                "requires_human",
+            ]
+            for key in bool_keys:
+                value = raw.get(key)
+                if isinstance(value, bool):
+                    return value
+                if isinstance(value, str) and value.strip().lower() in {"true", "yes", "1"}:
+                    return True
+            action_value = raw.get("assistant_action") or raw.get("action")
+            if isinstance(action_value, str) and action_value.strip().lower() in {
+                "handoff",
+                "human_handoff",
+                "transfer_to_human",
+            }:
+                return True
+            return None
         if isinstance(raw, (int, float)):
             return bool(raw)
         if isinstance(raw, str):
-            return raw.strip().lower() in {"1", "true", "yes", "y", "t"}
+            normalized = raw.strip().lower()
+            if normalized in {"1", "true", "yes", "y", "t"}:
+                return True
+            if normalized in {"handoff", "human_handoff", "transfer_to_human"}:
+                return True
+            return False
         return None
 
     def _row_to_lead(self, row: dict[str, Any]) -> LeadRecord | None:

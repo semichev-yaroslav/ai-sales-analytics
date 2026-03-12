@@ -1,0 +1,41 @@
+# Mapping for: ../AI-Saller-Alina-v2-new
+# Works with app/db/models in that project.
+
+leads:
+  table: leads
+  columns:
+    id: id
+    created_at: created_at
+    updated_at: updated_at
+    stage: stage
+    # No explicit status/lost_reason in this schema.
+    # booking_slot_at is treated as target action timestamp.
+    target_action_at: booking_slot_at
+
+messages:
+  table: messages
+  columns:
+    id: id
+    lead_id: lead_id
+    created_at: created_at
+    # source values: user / assistant / system
+    role: source
+    text: text
+
+ai_runs:
+  table: ai_runs
+  columns:
+    id: id
+    lead_id: lead_id
+    created_at: created_at
+    intent: intent
+    confidence: confidence
+    # Parse from raw_response keys like assistant_action=handoff or handoff_to_admin=true
+    handoff_to_human: raw_response
+    status: status
+    latency_ms: latency_ms
+
+# Optional entities are absent in this bot schema and are intentionally omitted:
+# - bookings
+# - stage_events
+# - follow_ups

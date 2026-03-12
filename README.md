@@ -237,6 +237,21 @@ docker compose up --build
 3. Запустите `run-daily` и проверьте generated report.
 4. После валидации включите scheduler и Telegram delivery.
 
+### Готовый профиль для AI-Saller-Alina-v2-new
+
+Для проекта `AI-Saller-Alina-v2-new` используйте:
+
+- mapping: `config/schema_mapping.alina_v2_new.yaml`
+- integration guide: `docs/INTEGRATION_AI_SALLER_ALINA_V2_NEW.md`
+
+Пример `.env` (SQLite):
+
+```env
+DATABASE_URL=sqlite:////Users/alinasemicheva/Documents/AI инженер/AI seller Alina v2/AI-Saller-Alina-v2-new/local.db
+SCHEMA_MAPPING_PATH=config/schema_mapping.alina_v2_new.yaml
+DEFAULT_TIMEZONE=Europe/Moscow
+```
+
 ## Расширение проекта
 
 Легко добавить:
