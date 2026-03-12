@@ -39,3 +39,6 @@ ai_runs:
 # - bookings
 # - stage_events
 # - follow_ups
+bookings: null
+stage_events: null
+follow_ups: null

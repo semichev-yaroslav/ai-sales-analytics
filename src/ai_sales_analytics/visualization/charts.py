@@ -66,7 +66,13 @@ class ChartBuilder:
         order = sorted(data.items(), key=lambda x: x[1], reverse=True)
         labels, values = zip(*order, strict=False)
         plt.figure(figsize=(9, 5))
-        sns.barplot(x=list(labels), y=list(values), palette="Blues_d")
+        sns.barplot(
+            x=list(labels),
+            y=list(values),
+            hue=list(labels),
+            palette="Blues_d",
+            legend=False,
+        )
         plt.title("Sales Funnel by Stage")
         plt.xlabel("Stage")
         plt.ylabel("Leads")
@@ -143,7 +149,13 @@ class ChartBuilder:
         sorted_items = sorted(data.items(), key=lambda x: x[1], reverse=True)[:10]
         labels, values = zip(*sorted_items, strict=False)
         plt.figure(figsize=(10, 4))
-        sns.barplot(x=list(labels), y=list(values), palette="viridis")
+        sns.barplot(
+            x=list(labels),
+            y=list(values),
+            hue=list(labels),
+            palette="viridis",
+            legend=False,
+        )
         plt.title("Intent Distribution")
         plt.xlabel("Intent")
         plt.ylabel("Count")
@@ -158,7 +170,13 @@ class ChartBuilder:
 
         labels, values = zip(*data.items(), strict=False)
         plt.figure(figsize=(9, 4))
-        sns.barplot(x=list(labels), y=list(values), palette="Reds")
+        sns.barplot(
+            x=list(labels),
+            y=list(values),
+            hue=list(labels),
+            palette="Reds",
+            legend=False,
+        )
         plt.title("Top Objection Categories")
         plt.xlabel("Category")
         plt.ylabel("Count")
@@ -173,7 +191,13 @@ class ChartBuilder:
 
         labels, values = zip(*data.items(), strict=False)
         plt.figure(figsize=(9, 4))
-        sns.barplot(x=list(labels), y=list(values), palette="mako")
+        sns.barplot(
+            x=list(labels),
+            y=list(values),
+            hue=list(labels),
+            palette="mako",
+            legend=False,
+        )
         plt.title("Top Services / Interests")
         plt.xlabel("Service / Topic")
         plt.ylabel("Mentions")
@@ -245,7 +269,13 @@ class ChartBuilder:
 
         labels, values = zip(*sorted(data.items(), key=lambda x: x[1], reverse=True), strict=False)
         plt.figure(figsize=(9, 4))
-        sns.barplot(x=list(labels), y=list(values), palette="rocket")
+        sns.barplot(
+            x=list(labels),
+            y=list(values),
+            hue=list(labels),
+            palette="rocket",
+            legend=False,
+        )
         plt.title("Lead Drop-Off by Stage")
         plt.xlabel("Stage")
         plt.ylabel("Lost Leads")
